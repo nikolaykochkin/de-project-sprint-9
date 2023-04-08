@@ -116,15 +116,6 @@ erDiagram
        varchar load_src
     }
     
-    l_order_user  }o--|| h_order : h_order_pk
-    l_order_user  }o--||  h_user : h_user_pk
-    s_order_cost  }o--||  h_order : h_order_pk
-    s_order_status  }o--||  h_order : h_order_pk
-    s_user_names  }o--||  h_user : h_user_pk
-```
-
-```mermaid
-erDiagram
     h_category {
        uuid h_category_pk PK
        varchar category_name UK
@@ -178,16 +169,6 @@ erDiagram
        varchar load_src
     }
     
-    l_product_category  }o--||  h_category : h_category_pk
-    l_product_category  }o--||  h_product : h_product_pk
-    l_product_restaurant  }o--||  h_product : h_product_pk
-    l_product_restaurant  }o--||  h_restaurant : h_restaurant_pk
-    s_product_names  }o--||  h_product : h_product_pk
-    s_restaurant_names  }o--||  h_restaurant : h_restaurant_pk
-```
-
-```mermaid
-erDiagram
     l_order_product {
        uuid hk_order_product_pk PK
        uuid h_order_pk FK
@@ -195,38 +176,44 @@ erDiagram
        timestamp load_dt
        varchar load_src
     }
-    
-    l_order_product  }o--||  h_order : h_order_pk
-    l_order_product  }o--||  h_product : h_product_pk
+
+    l_order_product }o--|| h_product: h_product_pk
+    l_order_user }o--|| h_order: h_order_pk
+    l_product_category }o--|| h_category: h_category_pk
+    l_product_restaurant }o--|| h_product: h_product_pk
+    l_product_restaurant }o--|| h_restaurant: h_restaurant_pk
+    s_order_cost }o--|| h_order: h_order_pk
+    s_order_status }o--|| h_order: h_order_pk
+    s_user_names }o--|| h_user: h_user_pk
+
+    h_order ||--o{ l_order_product: h_order_pk
+    h_user ||--o{ l_order_user: h_user_pk
+    h_product ||--o{ l_product_category: h_product_pk
+    h_product ||--o{ s_product_names: h_product_pk
+    h_restaurant ||--o{ s_restaurant_names: h_restaurant_pk
 ```
 
 ### Common Data Marts (CDM)
 
 CDM Общие витрины для заказчика.
 
-```puml
-@startuml
+```mermaid
+erDiagram
+    user_category_counters {
+        int id PK
+        uuid user_id UK
+        uuid category_id UK
+        varchar category_name
+        int order_cnt
+    }
 
-!theme plain
-top to bottom direction
-skinparam linetype ortho
-
-class user_category_counters {
-   user_id: uuid
-   category_id: uuid
-   category_name: varchar
-   order_cnt: integer
-   id: integer
-}
-class user_product_counters {
-   user_id: uuid
-   product_id: uuid
-   product_name: varchar
-   order_cnt: integer
-   id: integer
-}
-
-@enduml
+    user_product_counters {
+        int id PK
+        uuid user_id UK
+        uuid product_id UK
+        varchar product_name
+        int order_cnt
+    }
 ```
 
 ## Логика работы сервисов
