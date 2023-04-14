@@ -31,7 +31,7 @@ if __name__ == '__main__':
         config.kafka_producer(),
         config.redis_client(),
         config.stg_repository(),
-        10,
+        config.batch_size,
         app.logger
     )
 

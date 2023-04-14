@@ -24,7 +24,7 @@ class KafkaProducer:
         self.p = Producer(params)
 
     def produce(self, payload: Dict) -> None:
-        self.p.produce(self.topic, json.dumps(payload))
+        self.p.produce(self.topic, json.dumps(payload, default=str))
         self.p.flush(10)
 
 

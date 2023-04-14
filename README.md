@@ -218,8 +218,219 @@ erDiagram
 
 ## Логика работы сервисов
 
-### Service STG
+### STG-Service
 
-### Service DDS
+**Registry link:** cr.yandex/crppomhsg1o5elrk760j/stg_service
 
-### Service CDM
+#### Пример входного сообщения из order-service_orders
+
+```json
+{
+  "object_id": 1371198,
+  "object_type": "order",
+  "sent_dttm": "2023-04-08 20:27:36",
+  "payload": {
+    "restaurant": {
+      "id": "ef8c42c19b7518a9aebec106"
+    },
+    "date": "2023-04-01 20:45:43",
+    "user": {
+      "id": "626a81ce9a8cd1920641e29c"
+    },
+    "order_items": [
+      {
+        "id": "aeca4d08abab78869c20128c",
+        "name": "Рис с лимоном",
+        "price": 175,
+        "quantity": 5
+      }
+    ],
+    "bonus_payment": 0,
+    "cost": 875,
+    "payment": 875,
+    "bonus_grant": 0,
+    "statuses": [
+      {
+        "status": "CLOSED",
+        "dttm": "2023-04-01 20:45:43"
+      },
+      {
+        "status": "DELIVERING",
+        "dttm": "2023-04-01 20:12:14"
+      },
+      {
+        "status": "COOKING",
+        "dttm": "2023-04-01 19:14:45"
+      },
+      {
+        "status": "OPEN",
+        "dttm": "2023-04-01 18:55:52"
+      }
+    ],
+    "final_status": "CLOSED",
+    "update_ts": "2023-04-01 20:45:43"
+  }
+}
+```
+
+#### Пример выходного сообщения в stg-service-orders
+
+```json
+{
+  "object_id": 322519,
+  "object_type": "order",
+  "payload": {
+    "id": 322519,
+    "date": "2022-11-19 16:06:36",
+    "cost": 300,
+    "payment": 300,
+    "status": "CLOSED",
+    "restaurant": {
+      "id": "626a81cfefa404208fe9abae",
+      "name": "Кофейня №1"
+    },
+    "user": {
+      "id": "626a81ce9a8cd1920641e296",
+      "name": "Котова Ольга Вениаминовна"
+    },
+    "products": [
+      {
+        "id": "6276e8cd0cf48b4cded00878",
+        "price": 180,
+        "quantity": 1,
+        "name": "РОЛЛ С ТОФУ И ВЯЛЕНЫМИ ТОМАТАМИ",
+        "category": "Выпечка"
+      }
+    ]
+  }
+}
+```
+
+#### Порядок действий при обработке сообщения
+
+```mermaid
+sequenceDiagram
+    participant kafka as Kafka
+    participant service as STG-Service
+    participant dwh as DWH.STG
+    participant redis as Redis
+    kafka ->> service : Получить сообщение из<br/>топика order-service_orders
+    service ->> dwh : Сложить сообщение as-is<br/>в STG слой по логике upsert
+    redis ->> service : Получить user по<br/>user_id из сообщения
+    redis ->> service : Получить restaurant по<br/>restaurant_id из сообщения
+    loop Для каждого product_id в сообщении
+        service ->> service : Найти в restaurant.menu продукт<br/>по product_id и получить его категорию
+    end
+    service ->> service : Сформировать выходное сообщение
+    service ->> kafka : Отправить выходное сообщение<br/>в топик stg-service-orders
+```
+
+### DDS-Service
+
+**Registry link:** cr.yandex/crppomhsg1o5elrk760j/dds_service
+
+#### Пример входного сообщения из stg-service-orders
+
+```json
+{
+  "object_id": 322519,
+  "object_type": "order",
+  "payload": {
+    "id": 322519,
+    "date": "2022-11-19 16:06:36",
+    "cost": 300,
+    "payment": 300,
+    "status": "CLOSED",
+    "restaurant": {
+      "id": "626a81cfefa404208fe9abae",
+      "name": "Кофейня №1"
+    },
+    "user": {
+      "id": "626a81ce9a8cd1920641e296",
+      "name": "Котова Ольга Вениаминовна"
+    },
+    "products": [
+      {
+        "id": "6276e8cd0cf48b4cded00878",
+        "price": 180,
+        "quantity": 1,
+        "name": "РОЛЛ С ТОФУ И ВЯЛЕНЫМИ ТОМАТАМИ",
+        "category": "Выпечка"
+      }
+    ]
+  }
+}
+```
+
+#### Пример выходного сообщения в cdm-service-stats
+
+```json
+[
+  {
+    "user_id": "47044875-5c7b-448e-830a-bc6d13fe11da",
+    "product_id": "b7d5264c-2b37-4666-be51-23f80756892c",
+    "product_name": "Салат Тбилисо",
+    "category_id": "8690bd24-85e0-4eab-8091-26c81995cd1c",
+    "category_name": "Салаты",
+    "order_cnt": 1
+  }
+]
+```
+
+#### Порядок действий при обработке сообщения
+
+```mermaid
+sequenceDiagram
+    participant kafka as Kafka
+    participant service as DDS-Service
+    participant dwh as DWH.DDS
+    kafka ->> service : Получить сообщение из<br/>топика stg-service-orders
+    service ->> dwh : Создать временные таблицы для заказа и продуктов
+    service ->> dwh : Загрузить данные заказа во временную таблицу
+    service ->> dwh : Загрузить данные о продуктах во временную таблицу
+    service ->> dwh : Загрузить отсутствующие записи хабов
+    service ->> dwh : Дополнить временные таблицы ключами хабов
+    service ->> dwh : Загрузить отсутствующие линки
+    service ->> dwh : Загрузить сателлиты по логике upsert
+    dwh ->> service : Сформировать статистику по всем закрытым заказам пользователя<br/>в разрезе продуктов и категорий
+    service ->> service : Сформировать из статистики выходное сообщение
+    service ->> kafka : Отправить выходное сообщение<br/>в топик cdm-service-stats
+```
+
+### CDM-Service
+
+**Registry link:** cr.yandex/crppomhsg1o5elrk760j/cdm_service
+
+#### Пример входного сообщения из cdm-service-stats
+
+```json
+[
+  {
+    "user_id": "47044875-5c7b-448e-830a-bc6d13fe11da",
+    "product_id": "b7d5264c-2b37-4666-be51-23f80756892c",
+    "product_name": "Салат Тбилисо",
+    "category_id": "8690bd24-85e0-4eab-8091-26c81995cd1c",
+    "category_name": "Салаты",
+    "order_cnt": 1
+  }
+]
+```
+
+#### Порядок действий при обработке сообщения
+
+```mermaid
+sequenceDiagram
+    participant kafka as Kafka
+    participant service as CDM-Service
+    participant dwh as DWH.CDM
+    kafka ->> service : Получить сообщение из<br/>топика cdm-service-stats
+    service ->> dwh : Создать временную таблицу для статистики
+    service ->> dwh : Загрузить данные из сообщения во временную таблицу
+    service ->> dwh : Загрузить данные из временной таблицы в витрины по логике upsert
+```
+
+## Dashboard
+
+[Популярность блюд](https://datalens.yandex/2earrr8c3dl8s)
+
+![Dashboard.png](img%2FDashboard.png)

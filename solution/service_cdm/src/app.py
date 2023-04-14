@@ -13,7 +13,7 @@ config = AppConfig()
 
 
 @app.get('/health')
-def hello_world():
+def health():
     return 'healthy'
 
 
@@ -21,6 +21,9 @@ if __name__ == '__main__':
     app.logger.setLevel(logging.DEBUG)
 
     proc = CdmMessageProcessor(
+        config.kafka_consumer(),
+        config.cdm_repository(),
+        config.batch_size,
         app.logger
     )
 

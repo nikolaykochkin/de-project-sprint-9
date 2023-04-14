@@ -1,5 +1,6 @@
 import os
 
+from dds_loader.repository.dds_repository import DdsRepository
 from lib.kafka_connect import KafkaConsumer, KafkaProducer
 from lib.pg import PgConnect
 
@@ -8,7 +9,6 @@ class AppConfig:
     CERTIFICATE_PATH = '/crt/YandexInternalRootCA.crt'
 
     def __init__(self) -> None:
-
         self.kafka_host = str(os.getenv('KAFKA_HOST'))
         self.kafka_port = int(str(os.getenv('KAFKA_PORT')))
         self.kafka_consumer_username = str(os.getenv('KAFKA_CONSUMER_USERNAME'))
@@ -24,6 +24,11 @@ class AppConfig:
         self.pg_warehouse_dbname = str(os.getenv('PG_WAREHOUSE_DBNAME'))
         self.pg_warehouse_user = str(os.getenv('PG_WAREHOUSE_USER'))
         self.pg_warehouse_password = str(os.getenv('PG_WAREHOUSE_PASSWORD'))
+
+        self.order_final_status = str(os.getenv('ORDER_FINAL_STATUS'))
+        self.load_src = str(os.getenv('LOAD_SRC'))
+
+        self.batch_size = int(str(os.getenv('BATCH_SIZE')))
 
     def kafka_producer(self):
         return KafkaProducer(
@@ -53,4 +58,11 @@ class AppConfig:
             self.pg_warehouse_dbname,
             self.pg_warehouse_user,
             self.pg_warehouse_password
+        )
+
+    def dds_repository(self) -> DdsRepository:
+        return DdsRepository(
+            self.pg_warehouse_db(),
+            self.order_final_status,
+            self.load_src
         )

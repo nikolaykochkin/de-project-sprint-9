@@ -19,6 +19,8 @@ ARG PG_WAREHOUSE_DBNAME
 ARG PG_WAREHOUSE_USER
 ARG PG_WAREHOUSE_PASSWORD
 
+ARG BATCH_SIZE
+
 # Обновим компоненты в контейнере.
 RUN apt-get update -y
 

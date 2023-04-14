@@ -1,6 +1,6 @@
 asyncio
 APScheduler
-confluent_kafka==2.0.2
+confluent_kafka
 flask
 psycopg
 psycopg-binary

@@ -1,5 +1,5 @@
 import json
-from typing import Dict
+from typing import Dict, List
 
 import redis
 
@@ -19,3 +19,7 @@ class RedisClient:
     def get(self, k) -> Dict:
         obj: str = self._client.get(k)  # type: ignore
         return json.loads(obj)
+
+    def mget(self, *keys: str) -> List:
+        values = self._client.mget(keys)
+        return list(map(json.loads, values))
